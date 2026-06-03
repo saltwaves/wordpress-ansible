@@ -1,4 +1,35 @@
 ---
+- name: Install Sury PHP repository prerequisites
+  apt:
+    name:
+      - ca-certificates
+      - curl
+      - lsb-release
+    state: present
+    update_cache: true
+  when: php_install_sury_repository | bool
+
+- name: Download Sury PHP archive keyring package
+  get_url:
+    url: "{{ php_sury_keyring_deb_url }}"
+    dest: "{{ php_sury_keyring_deb_path }}"
+    mode: "0644"
+  when: php_install_sury_repository | bool
+
+- name: Install Sury PHP archive keyring
+  apt:
+    deb: "{{ php_sury_keyring_deb_path }}"
+    state: present
+  when: php_install_sury_repository | bool
+
+- name: Add Sury PHP repository
+  apt_repository:
+    repo: "{{ php_sury_repository }}"
+    filename: sury-php
+    state: present
+    update_cache: true
+  when: php_install_sury_repository | bool
+
 - name: Install PHP
   apt:
     name: "{{ php_packages }}"

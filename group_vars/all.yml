@@ -17,6 +17,10 @@ php_upload_max_filesize: 128M
 php_post_max_size: 128M
 php_memory_limit: 256M
 php_max_execution_time: 120
+php_install_sury_repository: true
+php_sury_keyring_deb_url: "https://packages.sury.org/debsuryorg-archive-keyring.deb"
+php_sury_keyring_deb_path: "/tmp/debsuryorg-archive-keyring.deb"
+php_sury_repository: "deb [signed-by=/usr/share/keyrings/debsuryorg-archive-keyring.gpg] https://packages.sury.org/php/ {{ ansible_distribution_release }} main"
 php_packages:
   - "php{{ php_version }}-bcmath"
   - "php{{ php_version }}-cli"

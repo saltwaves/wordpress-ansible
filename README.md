@@ -1,7 +1,8 @@
 # WordPress Ansible
 
 Reusable Ansible provisioning for a tuned single-server WordPress host. It is
-intended for current Ubuntu LTS images and defaults to Ubuntu native packages.
+intended for current Ubuntu LTS images and uses Ubuntu packages plus the Sury
+PHP repository for pinned PHP branches.
 
 The playbook installs and configures:
 
@@ -33,6 +34,7 @@ important variables are:
 deploy_user: ansible
 deploy_user_public_key_path: ~/.ssh/id_rsa.pub
 php_version: "8.4"
+php_install_sury_repository: true
 wordpress_domain: example.com
 wordpress_domains:
   - example.com
