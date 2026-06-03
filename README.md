@@ -35,6 +35,9 @@ deploy_user: ansible
 deploy_user_public_key_path: ~/.ssh/id_rsa.pub
 php_version: "8.4"
 php_install_sury_repository: true
+php_optional_packages:
+  - "php{{ php_version }}-imagick"
+  - "php{{ php_version }}-redis"
 wordpress_domain: example.com
 wordpress_domains:
   - example.com
@@ -58,6 +61,10 @@ Validate locally:
 ```sh
 scripts/validate.sh
 ```
+
+`php_packages` contains required PHP-FPM and WordPress packages. Packages in
+`php_optional_packages` are installed only when the configured apt repositories
+publish them for the pinned PHP branch.
 
 ## Migration
 

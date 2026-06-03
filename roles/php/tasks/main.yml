@@ -36,6 +36,34 @@
     state: present
     update_cache: true
 
+- name: Check optional PHP package availability
+  command:
+    argv:
+      - apt-cache
+      - show
+      - "{{ item }}"
+  loop: "{{ php_optional_packages }}"
+  register: php_optional_package_checks
+  changed_when: false
+  failed_when: false
+
+- name: Set available optional PHP packages
+  set_fact:
+    php_available_optional_packages: "{{ php_optional_package_checks.results | default([]) | selectattr('rc', 'equalto', 0) | map(attribute='item') | list }}"
+
+- name: Install available optional PHP packages
+  apt:
+    name: "{{ php_available_optional_packages }}"
+    state: present
+  when: php_available_optional_packages | length > 0
+
+- name: Report unavailable optional PHP packages
+  debug:
+    msg: "Skipping unavailable optional PHP packages: {{ php_unavailable_optional_packages | join(', ') }}"
+  vars:
+    php_unavailable_optional_packages: "{{ php_optional_package_checks.results | default([]) | rejectattr('rc', 'equalto', 0) | map(attribute='item') | list }}"
+  when: php_unavailable_optional_packages | length > 0
+
 - name: Enable PHP-FPM
   service:
     name: "{{ php_service_name }}"
