@@ -1,6 +1,5 @@
 ---
 - hosts: production
-  remote_user: root
   become: true
   roles:
     - common
