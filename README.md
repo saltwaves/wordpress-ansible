@@ -8,7 +8,7 @@ The playbook installs and configures:
 * deploy user, sudo, SSH hardening, and UFW
 * attached WordPress data volume mounted at `/srv/wordpress`
 * nginx WordPress virtual host
-* PHP-FPM, defaulting to PHP 8.5
+* PHP-FPM, defaulting to PHP 8.4
 * MySQL, Redis, WP-CLI, Fail2Ban, Git, rsync, and supporting tools
 
 ## Usage
@@ -32,7 +32,7 @@ important variables are:
 ```yaml
 deploy_user: ansible
 deploy_user_public_key_path: ~/.ssh/id_rsa.pub
-php_version: "8.5"
+php_version: "8.4"
 wordpress_domain: example.com
 wordpress_domains:
   - example.com

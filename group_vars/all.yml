@@ -8,7 +8,7 @@ username: "{{ deploy_user }}"
 
 ssh_port: 22
 
-php_version: "8.5"
+php_version: "8.4"
 php_service_name: "php{{ php_version }}-fpm"
 php_fpm_pool: www
 php_fpm_pool_conf: "/etc/php/{{ php_version }}/fpm/pool.d/{{ php_fpm_pool }}.conf"
@@ -29,7 +29,6 @@ php_packages:
   - "php{{ php_version }}-intl"
   - "php{{ php_version }}-mbstring"
   - "php{{ php_version }}-mysql"
-  - "php{{ php_version }}-opcache"
   - "php{{ php_version }}-redis"
   - "php{{ php_version }}-soap"
   - "php{{ php_version }}-xml"
