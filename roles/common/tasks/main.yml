@@ -2,17 +2,23 @@
 - name: Upgrade packages
   apt:
     upgrade: safe
-    update_cache: yes
+    update_cache: true
     cache_valid_time: 300
-  become: yes
 
 - name: Install packages
   apt:
     name:
       - aptitude
+      - acl
+      - at
+      - ca-certificates
       - jq
       - curl
       - git-core
-      - at
+      - gnupg
+      - lsb-release
+      - python3-pymysql
+      - rsync
+      - unzip
     state: present
-    update_cache: yes
+    update_cache: true

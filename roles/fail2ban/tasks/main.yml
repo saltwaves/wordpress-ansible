@@ -1,0 +1,32 @@
+---
+- name: Install Fail2Ban
+  apt:
+    name: fail2ban
+    state: present
+  when: fail2ban_enabled | bool
+
+- name: Install Fail2Ban local jail config
+  copy:
+    dest: /etc/fail2ban/jail.d/wordpress.local
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      [sshd]
+      enabled = true
+      port = {{ ssh_port }}
+
+      [nginx-http-auth]
+      enabled = true
+
+      [nginx-botsearch]
+      enabled = true
+  notify: restart fail2ban
+  when: fail2ban_enabled | bool
+
+- name: Enable Fail2Ban
+  service:
+    name: fail2ban
+    enabled: true
+    state: started
+  when: fail2ban_enabled | bool

@@ -1,26 +1,59 @@
 ---
-- name: Add Nginx repo
-  apt_repository:
-    repo: ppa:ondrej/nginx
-
 - name: Install Nginx
   apt:
-    name: nginx
+    name:
+      - nginx
+      - certbot
+      - python3-certbot-nginx
     state: present
-    force: yes
-    update_cache: yes
+    update_cache: true
 
-- name: Symlink default site
+- name: Enable Nginx
+  service:
+    name: nginx
+    enabled: true
+    state: started
+
+- name: Remove default site
   file:
-    src: /etc/nginx/sites-available/default
     dest: /etc/nginx/sites-enabled/default
-    state: link
+    state: absent
   notify: reload nginx
 
 - name: Set Nginx user
   lineinfile:
     dest: /etc/nginx/nginx.conf
     regexp: "^user"
-    line: "user {{ username }};"
+    line: "user {{ deploy_user }};"
     state: present
   notify: restart nginx
+
+- name: Install WordPress Nginx site
+  template:
+    src: wordpress.conf.j2
+    dest: "/etc/nginx/sites-available/{{ wordpress_site_name }}.conf"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: reload nginx
+
+- name: Enable WordPress Nginx site
+  file:
+    src: "/etc/nginx/sites-available/{{ wordpress_site_name }}.conf"
+    dest: "/etc/nginx/sites-enabled/{{ wordpress_site_name }}.conf"
+    state: link
+  notify: reload nginx
+
+- name: Validate Nginx config
+  command: nginx -t
+  changed_when: false
+
+- name: Issue Let's Encrypt certificate
+  command: >-
+    certbot --nginx --non-interactive --agree-tos --redirect
+    --email {{ letsencrypt_email }}
+    {{ wordpress_domains | map('regex_replace', '^(.*)$', '-d \\1') | join(' ') }}
+  args:
+    creates: "/etc/letsencrypt/live/{{ wordpress_domains[0] }}/fullchain.pem"
+  when: nginx_enable_letsencrypt | bool
+  notify: reload nginx

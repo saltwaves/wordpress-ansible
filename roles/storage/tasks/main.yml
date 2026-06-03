@@ -1,0 +1,51 @@
+---
+- name: Create WordPress data root
+  file:
+    path: "{{ wordpress_data_mount }}"
+    state: directory
+    owner: "{{ wordpress_data_owner }}"
+    group: "{{ wordpress_data_group }}"
+    mode: "0755"
+
+- name: Check configured data device
+  stat:
+    path: "{{ wordpress_data_device }}"
+  register: wordpress_data_device_stat
+  when: wordpress_data_device | length > 0
+
+- name: Fail when configured data device is missing
+  fail:
+    msg: "wordpress_data_device is set to {{ wordpress_data_device }}, but that device does not exist."
+  when:
+    - wordpress_data_device | length > 0
+    - not wordpress_data_device_stat.stat.exists
+
+- name: Create filesystem on data device
+  filesystem:
+    fstype: "{{ wordpress_data_fstype }}"
+    dev: "{{ wordpress_data_device }}"
+  when: wordpress_data_device | length > 0
+
+- name: Read data device UUID
+  command: "blkid -s UUID -o value {{ wordpress_data_device }}"
+  register: wordpress_data_device_uuid
+  changed_when: false
+  when: wordpress_data_device | length > 0
+
+- name: Mount WordPress data volume
+  mount:
+    path: "{{ wordpress_data_mount }}"
+    src: "UUID={{ wordpress_data_device_uuid.stdout }}"
+    fstype: "{{ wordpress_data_fstype }}"
+    opts: defaults,nofail
+    state: mounted
+  when: wordpress_data_device | length > 0
+
+- name: Create WordPress directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ wordpress_data_owner }}"
+    group: "{{ wordpress_data_group }}"
+    mode: "0755"
+  loop: "{{ wordpress_data_directories }}"

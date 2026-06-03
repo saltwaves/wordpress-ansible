@@ -1,0 +1,13 @@
+---
+- name: Install Redis
+  apt:
+    name: redis-server
+    state: present
+  when: redis_enabled | bool
+
+- name: Enable Redis
+  service:
+    name: redis-server
+    enabled: true
+    state: started
+  when: redis_enabled | bool

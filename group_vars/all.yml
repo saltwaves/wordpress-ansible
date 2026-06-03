@@ -1,0 +1,65 @@
+---
+deploy_user: ansible
+deploy_user_password_hash: ""
+deploy_user_public_key_path: "~/.ssh/id_rsa.pub"
+
+# Backwards compatibility with the original SpinupWP playbook variable name.
+username: "{{ deploy_user }}"
+
+ssh_port: 22
+
+php_version: "8.5"
+php_service_name: "php{{ php_version }}-fpm"
+php_fpm_pool: www
+php_fpm_pool_conf: "/etc/php/{{ php_version }}/fpm/pool.d/{{ php_fpm_pool }}.conf"
+php_fpm_ini: "/etc/php/{{ php_version }}/fpm/php.ini"
+php_upload_max_filesize: 128M
+php_post_max_size: 128M
+php_memory_limit: 256M
+php_max_execution_time: 120
+php_packages:
+  - "php{{ php_version }}-bcmath"
+  - "php{{ php_version }}-cli"
+  - "php{{ php_version }}-common"
+  - "php{{ php_version }}-curl"
+  - "php{{ php_version }}-fpm"
+  - "php{{ php_version }}-gd"
+  - "php{{ php_version }}-igbinary"
+  - "php{{ php_version }}-imagick"
+  - "php{{ php_version }}-intl"
+  - "php{{ php_version }}-mbstring"
+  - "php{{ php_version }}-mysql"
+  - "php{{ php_version }}-opcache"
+  - "php{{ php_version }}-redis"
+  - "php{{ php_version }}-soap"
+  - "php{{ php_version }}-xml"
+  - "php{{ php_version }}-zip"
+
+wordpress_site_name: wordpress
+wordpress_domain: example.com
+wordpress_domains:
+  - "{{ wordpress_domain }}"
+  - "www.{{ wordpress_domain }}"
+wordpress_data_mount: /srv/wordpress
+wordpress_data_device: ""
+wordpress_data_fstype: ext4
+wordpress_web_root: "{{ wordpress_data_mount }}/public"
+wordpress_data_owner: "{{ deploy_user }}"
+wordpress_data_group: "{{ deploy_user }}"
+wordpress_data_directories:
+  - "{{ wordpress_web_root }}"
+  - "{{ wordpress_web_root }}/wp-content"
+  - "{{ wordpress_web_root }}/wp-content/uploads"
+
+nginx_default_server: true
+nginx_enable_letsencrypt: false
+letsencrypt_email: ""
+
+mysql_create_wordpress_database: false
+wordpress_db_name: wordpress
+wordpress_db_user: wordpress
+wordpress_db_password: ""
+wordpress_db_host: localhost
+
+redis_enabled: true
+fail2ban_enabled: true

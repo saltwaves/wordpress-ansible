@@ -1,15 +1,15 @@
 ---
-- name: start php
+- name: start php-fpm
   service:
-    name: php8.1-fpm
+    name: "{{ php_service_name }}"
     state: started
 
-- name: reload php
+- name: reload php-fpm
   service:
-    name: php8.1-fpm
+    name: "{{ php_service_name }}"
     state: reloaded
 
-- name: restart php
+- name: restart php-fpm
   service:
-    name: php8.1-fpm
+    name: "{{ php_service_name }}"
     state: restarted

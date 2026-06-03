@@ -1,75 +1,61 @@
 ---
-- name: Add PHP repo
-  apt_repository:
-    repo: ppa:ondrej/php
-
 - name: Install PHP
   apt:
-    name:
-      - "php8.1-bcmath"
-      - "php8.1-cli"
-      - "php8.1-common"
-      - "php8.1-curl"
-      - "php8.1-fpm"
-      - "php8.1-gd"
-      - "php8.1-igbinary"
-      - "php8.1-imagick"
-      - "php8.1-mbstring"
-      - "php8.1-mysql"
-      - "php8.1-opcache"
-      - "php8.1-redis"
-      - "php8.1-soap"
-      - "php8.1-xml"
-      - "php8.1-xmlrpc"
-      - "php8.1-zip"
+    name: "{{ php_packages }}"
     state: present
-    force: yes
-    update_cache: yes
+    update_cache: true
+
+- name: Enable PHP-FPM
+  service:
+    name: "{{ php_service_name }}"
+    enabled: true
+    state: started
 
 - name: Set PHP user
   lineinfile:
-    dest: /etc/php/8.1/fpm/pool.d/www.conf
+    dest: "{{ php_fpm_pool_conf }}"
     regexp: "^user"
-    line: "user = {{ username }}"
+    line: "user = {{ deploy_user }}"
     state: present
-  notify: restart php
+  notify: restart php-fpm
 
 - name: Set PHP group
   lineinfile:
-    dest: /etc/php/8.1/fpm/pool.d/www.conf
+    dest: "{{ php_fpm_pool_conf }}"
     regexp: "^group"
-    line: "group = {{ username }}"
+    line: "group = {{ deploy_user }}"
     state: present
-  notify: restart php
+  notify: restart php-fpm
 
 - name: Set PHP listen owner
   lineinfile:
-    dest: /etc/php/8.1/fpm/pool.d/www.conf
+    dest: "{{ php_fpm_pool_conf }}"
     regexp: "^listen\\.owner"
-    line: "listen.owner = {{ username }}"
+    line: "listen.owner = {{ deploy_user }}"
     state: present
-  notify: restart php
+  notify: restart php-fpm
 
 - name: Set PHP listen group
   lineinfile:
-    dest: /etc/php/8.1/fpm/pool.d/www.conf
+    dest: "{{ php_fpm_pool_conf }}"
     regexp: "^listen\\.group"
-    line: "listen.group = {{ username }}"
+    line: "listen.group = {{ deploy_user }}"
     state: present
-  notify: restart php
+  notify: restart php-fpm
 
-- name: Set PHP upload max filesize
+- name: Tune PHP-FPM ini values
   lineinfile:
-    dest: /etc/php/8.1/fpm/php.ini
-    regexp: "^upload_max_filesize"
-    line: "upload_max_filesize = 128M"
+    dest: "{{ php_fpm_ini }}"
+    regexp: "^;?{{ item.key }}\\s*="
+    line: "{{ item.key }} = {{ item.value }}"
     state: present
-  notify: reload php
-
-- name: Set PHP post max filesize
-  lineinfile:
-    dest: /etc/php/8.1/fpm/php.ini
-    regexp: "^post_max_size"
-    line: "post_max_size = 128M"
-    state: present
-  notify: reload php
+  loop:
+    - key: upload_max_filesize
+      value: "{{ php_upload_max_filesize }}"
+    - key: post_max_size
+      value: "{{ php_post_max_size }}"
+    - key: memory_limit
+      value: "{{ php_memory_limit }}"
+    - key: max_execution_time
+      value: "{{ php_max_execution_time }}"
+  notify: reload php-fpm

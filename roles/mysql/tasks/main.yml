@@ -1,6 +1,40 @@
 ---
 - name: Install MySQL
   apt:
-    name: mysql-server
+    name:
+      - mysql-server
+      - python3-pymysql
     state: present
-    force: yes
+
+- name: Enable MySQL
+  service:
+    name: mysql
+    enabled: true
+    state: started
+
+- name: Assert WordPress database password is set
+  assert:
+    that:
+      - wordpress_db_password | length > 0
+    fail_msg: "Set wordpress_db_password when mysql_create_wordpress_database is true."
+  when: mysql_create_wordpress_database | bool
+
+- name: Create WordPress database
+  community.mysql.mysql_db:
+    name: "{{ wordpress_db_name }}"
+    state: present
+    encoding: utf8mb4
+    collation: utf8mb4_unicode_ci
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+  when: mysql_create_wordpress_database | bool
+
+- name: Create WordPress database user
+  community.mysql.mysql_user:
+    name: "{{ wordpress_db_user }}"
+    host: "{{ wordpress_db_host }}"
+    password: "{{ wordpress_db_password }}"
+    priv: "{{ wordpress_db_name }}.*:ALL"
+    state: present
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+  no_log: true
+  when: mysql_create_wordpress_database | bool

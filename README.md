@@ -1,32 +1,67 @@
 # WordPress Ansible
 
-This repository contains a playbook for provisioning modern hosting environments geared towards WordPress. It's based on [How to Install WordPress on Ubuntu 20.04](https://deliciousbrains.com/hosting-wordpress-setup-secure-virtual-server/). The following is handled out of the box:
+Reusable Ansible provisioning for a tuned single-server WordPress host. It is
+intended for current Ubuntu LTS images and defaults to Ubuntu native packages.
 
-* User setup
-* SSH hardening
-* Firewall setup
+The playbook installs and configures:
 
-It will also install the following software:
-
-* Nginx with HTTP/2
-* PHP 8.1
-* MySQL
-* Redis
-* WP-CLI
-* Fail2Ban
-* Git
+* deploy user, sudo, SSH hardening, and UFW
+* attached WordPress data volume mounted at `/srv/wordpress`
+* nginx WordPress virtual host
+* PHP-FPM, defaulting to PHP 8.5
+* MySQL, Redis, WP-CLI, Fail2Ban, Git, rsync, and supporting tools
 
 ## Usage
 
-Configure your [hosts file](https://github.com/deliciousbrains/wordpress-ansible/blob/master/hosts).
+Install collection dependencies:
 
+```sh
+ansible-galaxy collection install -r collections/requirements.yml
 ```
+
+Configure inventory:
+
+```ini
 [production]
-192.168.1.1 #sampledomain.com
+203.0.113.10 ansible_user=root wordpress_data_device=/dev/vdb
 ```
 
-Edit [provision.yml](https://github.com/deliciousbrains/wordpress-ansible/blob/master/provision.yml) to configure your default user, [hashed](https://docs.ansible.com/ansible/latest/reference_appendices/faq.html#how-do-i-generate-encrypted-passwords-for-the-user-module) sudo password and local public key path. This will create a new user on the provisioned servers that you can use to gain SSH access.
+Set project variables in inventory, group vars, or `--extra-vars`. The most
+important variables are:
+
+```yaml
+deploy_user: ansible
+deploy_user_public_key_path: ~/.ssh/id_rsa.pub
+php_version: "8.5"
+wordpress_domain: example.com
+wordpress_domains:
+  - example.com
+  - www.example.com
+wordpress_data_mount: /srv/wordpress
+wordpress_web_root: /srv/wordpress/public
+mysql_create_wordpress_database: true
+wordpress_db_name: wordpress
+wordpress_db_user: wordpress
+wordpress_db_password: set-this-from-vault-or-ci-secret
+```
 
 Run:
 
-`ansible-playbook provision.yml`
+```sh
+ansible-playbook -i hosts provision.yml
+```
+
+Validate locally:
+
+```sh
+scripts/validate.sh
+```
+
+## Migration
+
+`scripts/migrate-wordpress.sh` provides generic initial and final migration
+passes for WordPress files and database data. The destination server pulls files
+from the source via `rsync` using SSH agent forwarding, then imports a compressed
+database dump.
+
+Run `scripts/migrate-wordpress.sh --help` for required environment variables.
