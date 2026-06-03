@@ -48,6 +48,7 @@ mysql_create_wordpress_database: true
 wordpress_db_name: wordpress
 wordpress_db_user: wordpress
 wordpress_db_password: set-this-from-vault-or-ci-secret
+mysql_wordpress_user_auth_plugin: caching_sha2_password
 ```
 
 Run:

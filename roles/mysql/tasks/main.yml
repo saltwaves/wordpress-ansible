@@ -32,7 +32,9 @@
   community.mysql.mysql_user:
     name: "{{ wordpress_db_user }}"
     host: "{{ wordpress_db_host }}"
-    password: "{{ wordpress_db_password }}"
+    plugin: "{{ mysql_wordpress_user_auth_plugin }}"
+    plugin_auth_string: "{{ wordpress_db_password }}"
+    salt: "{{ mysql_wordpress_user_auth_salt }}"
     priv: "{{ wordpress_db_name }}.*:ALL"
     state: present
     login_unix_socket: /var/run/mysqld/mysqld.sock
