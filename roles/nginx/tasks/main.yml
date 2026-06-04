@@ -48,6 +48,9 @@
   command: nginx -t
   changed_when: false
 
+- name: Apply Nginx configuration changes
+  meta: flush_handlers
+
 - name: Issue Let's Encrypt certificate
   command: >-
     certbot --nginx --non-interactive --agree-tos --redirect
