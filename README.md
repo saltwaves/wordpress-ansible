@@ -75,5 +75,6 @@ from the source via `rsync` using SSH agent forwarding, then imports a compresse
 database dump.
 
 Set `DEST_SSH_PRIVATE_KEY_FILE` when the destination host needs a specific SSH
-key. Run `scripts/migrate-wordpress.sh --help` for all required and optional
-environment variables.
+key, and optionally `DEST_SSH_PUBLIC_KEY_FILE` to verify the keypair before
+connecting. Run `scripts/migrate-wordpress.sh --help` for all required and
+optional environment variables.

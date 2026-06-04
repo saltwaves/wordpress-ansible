@@ -20,6 +20,8 @@ Required environment:
 Optional environment:
   DEST_SSH_PRIVATE_KEY_FILE
                           private key file for destination SSH
+  DEST_SSH_PUBLIC_KEY_FILE
+                          public key file expected to match destination SSH key
   DEST_SSH_KNOWN_HOSTS_FILE
                           known_hosts file for destination SSH
   DEST_SSH_STRICT_HOST_KEY_CHECKING
@@ -41,6 +43,20 @@ quote() {
 }
 
 dest_ssh_args=()
+verify_dest_ssh_key_pair() {
+  if [[ -z "${DEST_SSH_PRIVATE_KEY_FILE:-}" || -z "${DEST_SSH_PUBLIC_KEY_FILE:-}" ]]; then
+    return
+  fi
+
+  local derived_public_key configured_public_key
+  derived_public_key="$(ssh-keygen -y -f "$DEST_SSH_PRIVATE_KEY_FILE" | awk '{ print $1 " " $2 }')"
+  configured_public_key="$(awk '{ print $1 " " $2 }' "$DEST_SSH_PUBLIC_KEY_FILE")"
+  if [[ "$derived_public_key" != "$configured_public_key" ]]; then
+    echo "DEST_SSH_PUBLIC_KEY_FILE does not match DEST_SSH_PRIVATE_KEY_FILE." >&2
+    exit 2
+  fi
+}
+
 build_dest_ssh_args() {
   dest_ssh_args=()
 
@@ -106,6 +122,7 @@ for name in SOURCE_SSH DEST_SSH SOURCE_PATH DEST_PATH SOURCE_DB_NAME SOURCE_DB_U
   require_env "$name"
 done
 
+verify_dest_ssh_key_pair
 build_dest_ssh_args
 
 SOURCE_DB_HOST="${SOURCE_DB_HOST:-localhost}"
