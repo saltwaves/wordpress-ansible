@@ -232,7 +232,7 @@ if [[ "$mode" == "final" && "$dry_run" -eq 0 ]]; then
 fi
 
 dest_ssh_agent \
-  "rsync -azH --numeric-ids --delete --info=progress2 ${RSYNC_EXTRA_ARGS:-} ${rsync_dry_run[*]} -e 'ssh -o StrictHostKeyChecking=accept-new' $(quote "${SOURCE_SSH}:${SOURCE_PATH}/") $(quote "${DEST_PATH}/")"
+  "rsync -azH --numeric-ids --delete --info=progress2 ${RSYNC_EXTRA_ARGS:-} ${rsync_dry_run[*]-} -e 'ssh -o StrictHostKeyChecking=accept-new' $(quote "${SOURCE_SSH}:${SOURCE_PATH}/") $(quote "${DEST_PATH}/")"
 
 if [[ "$dry_run" -eq 0 ]]; then
   source_ssh \
