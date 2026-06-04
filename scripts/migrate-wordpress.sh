@@ -235,6 +235,11 @@ dest_ssh_agent \
   "rsync -azH --numeric-ids --delete --info=progress2 ${RSYNC_EXTRA_ARGS:-} ${rsync_dry_run[*]-} -e 'ssh -o StrictHostKeyChecking=accept-new' $(quote "${SOURCE_SSH}:${SOURCE_PATH}/") $(quote "${DEST_PATH}/")"
 
 if [[ "$dry_run" -eq 0 ]]; then
+  dest_ssh \
+    "cd $(quote "$DEST_PATH") && wp config set DB_NAME $(quote "$DEST_DB_NAME") --type=constant --allow-root --quiet && wp config set DB_USER $(quote "$DEST_DB_USER") --type=constant --allow-root --quiet && wp config set DB_PASSWORD $(quote "$DEST_DB_PASSWORD") --type=constant --allow-root --quiet && wp config set DB_HOST $(quote "$DEST_DB_HOST") --type=constant --allow-root --quiet"
+fi
+
+if [[ "$dry_run" -eq 0 ]]; then
   source_ssh \
     "MYSQL_PWD=$(quote "$SOURCE_DB_PASSWORD") mysqldump --single-transaction --quick --hex-blob -h $(quote "$SOURCE_DB_HOST") -u $(quote "$SOURCE_DB_USER") $(quote "$SOURCE_DB_NAME") | gzip -c" \
     | dest_ssh "cat > $(quote "$remote_dump")"
