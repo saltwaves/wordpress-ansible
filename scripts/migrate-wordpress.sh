@@ -236,7 +236,7 @@ dest_ssh_agent \
 
 if [[ "$dry_run" -eq 0 ]]; then
   dest_ssh \
-    "cd $(quote "$DEST_PATH") && wp config set DB_NAME $(quote "$DEST_DB_NAME") --type=constant --allow-root --quiet && wp config set DB_USER $(quote "$DEST_DB_USER") --type=constant --allow-root --quiet && wp config set DB_PASSWORD $(quote "$DEST_DB_PASSWORD") --type=constant --allow-root --quiet && wp config set DB_HOST $(quote "$DEST_DB_HOST") --type=constant --allow-root --quiet"
+    "cd $(quote "$DEST_PATH") && wp config set DB_NAME $(quote "$DEST_DB_NAME") --type=constant --allow-root --quiet && wp config set DB_USER $(quote "$DEST_DB_USER") --type=constant --allow-root --quiet && wp config set DB_PASSWORD $(quote "$DEST_DB_PASSWORD") --type=constant --allow-root --quiet && wp config set DB_HOST $(quote "$DEST_DB_HOST") --type=constant --allow-root --quiet && if [[ -d wp-content/plugins/wp-super-cache ]]; then wp config set WPCACHEHOME $(quote "${DEST_PATH}/wp-content/plugins/wp-super-cache/") --type=constant --allow-root --quiet; fi"
 fi
 
 if [[ "$dry_run" -eq 0 ]]; then
