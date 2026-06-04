@@ -74,4 +74,6 @@ passes for WordPress files and database data. The destination server pulls files
 from the source via `rsync` using SSH agent forwarding, then imports a compressed
 database dump.
 
-Run `scripts/migrate-wordpress.sh --help` for required environment variables.
+Set `DEST_SSH_PRIVATE_KEY_FILE` when the destination host needs a specific SSH
+key. Run `scripts/migrate-wordpress.sh --help` for all required and optional
+environment variables.

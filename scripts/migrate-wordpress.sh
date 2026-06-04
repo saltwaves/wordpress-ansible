@@ -18,6 +18,12 @@ Required environment:
   DEST_DB_PASSWORD        destination database password
 
 Optional environment:
+  DEST_SSH_PRIVATE_KEY_FILE
+                          private key file for destination SSH
+  DEST_SSH_KNOWN_HOSTS_FILE
+                          known_hosts file for destination SSH
+  DEST_SSH_STRICT_HOST_KEY_CHECKING
+                          destination host key policy, default accept-new
   SOURCE_DB_HOST          source database host, default localhost
   DEST_DB_HOST            destination database host, default localhost
   SOURCE_PUBLIC_URL       old URL for WP-CLI search-replace
@@ -32,6 +38,29 @@ USAGE
 
 quote() {
   printf "%q" "$1"
+}
+
+dest_ssh_args=()
+build_dest_ssh_args() {
+  dest_ssh_args=()
+
+  if [[ -n "${DEST_SSH_PRIVATE_KEY_FILE:-}" ]]; then
+    dest_ssh_args+=(-i "$DEST_SSH_PRIVATE_KEY_FILE" -o IdentitiesOnly=yes)
+  fi
+
+  if [[ -n "${DEST_SSH_KNOWN_HOSTS_FILE:-}" ]]; then
+    dest_ssh_args+=(-o "UserKnownHostsFile=$DEST_SSH_KNOWN_HOSTS_FILE")
+  fi
+
+  dest_ssh_args+=(-o "StrictHostKeyChecking=${DEST_SSH_STRICT_HOST_KEY_CHECKING:-accept-new}")
+}
+
+dest_ssh() {
+  ssh "${dest_ssh_args[@]}" "$DEST_SSH" "$@"
+}
+
+dest_ssh_agent() {
+  ssh -A "${dest_ssh_args[@]}" "$DEST_SSH" "$@"
 }
 
 require_env() {
@@ -77,6 +106,8 @@ for name in SOURCE_SSH DEST_SSH SOURCE_PATH DEST_PATH SOURCE_DB_NAME SOURCE_DB_U
   require_env "$name"
 done
 
+build_dest_ssh_args
+
 SOURCE_DB_HOST="${SOURCE_DB_HOST:-localhost}"
 DEST_DB_HOST="${DEST_DB_HOST:-localhost}"
 REMOTE_BACKUP_DIR="${REMOTE_BACKUP_DIR:-/srv/wordpress/backups}"
@@ -88,33 +119,33 @@ if [[ "$dry_run" -eq 1 ]]; then
   rsync_dry_run+=(--dry-run)
 fi
 
-ssh "$DEST_SSH" "mkdir -p $(quote "$DEST_PATH") $(quote "$REMOTE_BACKUP_DIR")"
+dest_ssh "mkdir -p $(quote "$DEST_PATH") $(quote "$REMOTE_BACKUP_DIR")"
 
 if [[ "$mode" == "final" && "$dry_run" -eq 0 ]]; then
   ssh "$SOURCE_SSH" "cd $(quote "$SOURCE_PATH") && wp maintenance-mode activate --allow-root || true"
 fi
 
-ssh -A "$DEST_SSH" \
+dest_ssh_agent \
   "rsync -azH --numeric-ids --delete --info=progress2 ${RSYNC_EXTRA_ARGS:-} ${rsync_dry_run[*]} -e 'ssh -o StrictHostKeyChecking=accept-new' $(quote "${SOURCE_SSH}:${SOURCE_PATH}/") $(quote "${DEST_PATH}/")"
 
 if [[ "$dry_run" -eq 0 ]]; then
   ssh "$SOURCE_SSH" \
     "MYSQL_PWD=$(quote "$SOURCE_DB_PASSWORD") mysqldump --single-transaction --quick --hex-blob -h $(quote "$SOURCE_DB_HOST") -u $(quote "$SOURCE_DB_USER") $(quote "$SOURCE_DB_NAME") | gzip -c" \
-    | ssh "$DEST_SSH" "cat > $(quote "$remote_dump")"
+    | dest_ssh "cat > $(quote "$remote_dump")"
 
-  ssh "$DEST_SSH" \
+  dest_ssh \
     "gzip -dc $(quote "$remote_dump") | MYSQL_PWD=$(quote "$DEST_DB_PASSWORD") mysql -h $(quote "$DEST_DB_HOST") -u $(quote "$DEST_DB_USER") $(quote "$DEST_DB_NAME")"
 
   if [[ -n "${SOURCE_PUBLIC_URL:-}" && -n "${DEST_PUBLIC_URL:-}" && "$SOURCE_PUBLIC_URL" != "$DEST_PUBLIC_URL" ]]; then
-    ssh "$DEST_SSH" \
+    dest_ssh \
       "cd $(quote "$DEST_PATH") && wp search-replace $(quote "$SOURCE_PUBLIC_URL") $(quote "$DEST_PUBLIC_URL") --all-tables --precise --skip-columns=guid --allow-root"
   fi
 
-  ssh "$DEST_SSH" "cd $(quote "$DEST_PATH") && wp cache flush --allow-root || true"
+  dest_ssh "cd $(quote "$DEST_PATH") && wp cache flush --allow-root || true"
 fi
 
 if [[ "$mode" == "final" && "$dry_run" -eq 0 ]]; then
-  ssh "$DEST_SSH" "cd $(quote "$DEST_PATH") && wp maintenance-mode deactivate --allow-root || true"
+  dest_ssh "cd $(quote "$DEST_PATH") && wp maintenance-mode deactivate --allow-root || true"
 fi
 
 echo "Migration ${mode} pass complete. Database backup on destination: ${remote_dump}"
