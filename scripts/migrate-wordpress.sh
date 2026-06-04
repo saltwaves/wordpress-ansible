@@ -18,6 +18,14 @@ Required environment:
   DEST_DB_PASSWORD        destination database password
 
 Optional environment:
+  SOURCE_SSH_PRIVATE_KEY_FILE
+                          local private key for source SSH, e.g. ~/.ssh/id_rsa
+  SOURCE_SSH_KNOWN_HOSTS_FILE
+                          known_hosts file for local source SSH
+  SOURCE_SSH_STRICT_HOST_KEY_CHECKING
+                          source host key policy, default accept-new
+  SOURCE_SSH_KEEP_IN_AGENT
+                          keep auto-added source key in agent, default false
   DEST_SSH_PRIVATE_KEY_FILE
                           private key file for destination SSH
   DEST_SSH_PUBLIC_KEY_FILE
@@ -40,6 +48,86 @@ USAGE
 
 quote() {
   printf "%q" "$1"
+}
+
+expand_local_path() {
+  local path="$1"
+  if [[ "$path" == "~" ]]; then
+    printf '%s\n' "$HOME"
+  elif [[ "$path" == "~/"* ]]; then
+    printf '%s/%s\n' "$HOME" "${path#"~/"}"
+  else
+    printf '%s\n' "$path"
+  fi
+}
+
+source_ssh_args=()
+source_ssh_agent_started=0
+source_ssh_key_added_to_agent=0
+
+cleanup_source_ssh_agent() {
+  if [[ "$source_ssh_key_added_to_agent" -eq 1 && "${SOURCE_SSH_KEEP_IN_AGENT:-false}" != "true" ]]; then
+    ssh-add -d "$SOURCE_SSH_PRIVATE_KEY_FILE" >/dev/null 2>&1 || true
+  fi
+
+  if [[ "$source_ssh_agent_started" -eq 1 ]]; then
+    ssh-agent -k >/dev/null 2>&1 || true
+  fi
+}
+
+source_key_fingerprint() {
+  ssh-keygen -y -f "$1" | ssh-keygen -lf - -E sha256 | awk '{ print $2 }'
+}
+
+ensure_source_key_in_agent() {
+  if [[ -z "${SOURCE_SSH_PRIVATE_KEY_FILE:-}" ]]; then
+    return
+  fi
+
+  if ! command -v ssh-add >/dev/null 2>&1; then
+    echo "ssh-add is required when SOURCE_SSH_PRIVATE_KEY_FILE is set." >&2
+    exit 2
+  fi
+
+  if [[ -z "${SSH_AUTH_SOCK:-}" ]]; then
+    eval "$(ssh-agent -s)" >/dev/null
+    source_ssh_agent_started=1
+  fi
+
+  local fingerprint
+  fingerprint="$(source_key_fingerprint "$SOURCE_SSH_PRIVATE_KEY_FILE")"
+  if ssh-add -l -E sha256 2>/dev/null | awk '{ print $2 }' | grep -Fxq "$fingerprint"; then
+    return
+  fi
+
+  ssh-add "$SOURCE_SSH_PRIVATE_KEY_FILE" >/dev/null
+  source_ssh_key_added_to_agent=1
+  trap cleanup_source_ssh_agent EXIT
+}
+
+build_source_ssh_args() {
+  source_ssh_args=()
+
+  if [[ -n "${SOURCE_SSH_PRIVATE_KEY_FILE:-}" ]]; then
+    SOURCE_SSH_PRIVATE_KEY_FILE="$(expand_local_path "$SOURCE_SSH_PRIVATE_KEY_FILE")"
+    if [[ ! -f "$SOURCE_SSH_PRIVATE_KEY_FILE" ]]; then
+      echo "SOURCE_SSH_PRIVATE_KEY_FILE does not exist: $SOURCE_SSH_PRIVATE_KEY_FILE" >&2
+      exit 2
+    fi
+    source_ssh_args+=(-i "$SOURCE_SSH_PRIVATE_KEY_FILE" -o IdentitiesOnly=yes)
+    ensure_source_key_in_agent
+  fi
+
+  if [[ -n "${SOURCE_SSH_KNOWN_HOSTS_FILE:-}" ]]; then
+    SOURCE_SSH_KNOWN_HOSTS_FILE="$(expand_local_path "$SOURCE_SSH_KNOWN_HOSTS_FILE")"
+    source_ssh_args+=(-o "UserKnownHostsFile=$SOURCE_SSH_KNOWN_HOSTS_FILE")
+  fi
+
+  source_ssh_args+=(-o "StrictHostKeyChecking=${SOURCE_SSH_STRICT_HOST_KEY_CHECKING:-accept-new}")
+}
+
+source_ssh() {
+  ssh "${source_ssh_args[@]}" "$SOURCE_SSH" "$@"
 }
 
 dest_ssh_args=()
@@ -123,6 +211,7 @@ for name in SOURCE_SSH DEST_SSH SOURCE_PATH DEST_PATH SOURCE_DB_NAME SOURCE_DB_U
 done
 
 verify_dest_ssh_key_pair
+build_source_ssh_args
 build_dest_ssh_args
 
 SOURCE_DB_HOST="${SOURCE_DB_HOST:-localhost}"
@@ -139,14 +228,14 @@ fi
 dest_ssh "mkdir -p $(quote "$DEST_PATH") $(quote "$REMOTE_BACKUP_DIR")"
 
 if [[ "$mode" == "final" && "$dry_run" -eq 0 ]]; then
-  ssh "$SOURCE_SSH" "cd $(quote "$SOURCE_PATH") && wp maintenance-mode activate --allow-root || true"
+  source_ssh "cd $(quote "$SOURCE_PATH") && wp maintenance-mode activate --allow-root || true"
 fi
 
 dest_ssh_agent \
   "rsync -azH --numeric-ids --delete --info=progress2 ${RSYNC_EXTRA_ARGS:-} ${rsync_dry_run[*]} -e 'ssh -o StrictHostKeyChecking=accept-new' $(quote "${SOURCE_SSH}:${SOURCE_PATH}/") $(quote "${DEST_PATH}/")"
 
 if [[ "$dry_run" -eq 0 ]]; then
-  ssh "$SOURCE_SSH" \
+  source_ssh \
     "MYSQL_PWD=$(quote "$SOURCE_DB_PASSWORD") mysqldump --single-transaction --quick --hex-blob -h $(quote "$SOURCE_DB_HOST") -u $(quote "$SOURCE_DB_USER") $(quote "$SOURCE_DB_NAME") | gzip -c" \
     | dest_ssh "cat > $(quote "$remote_dump")"
 

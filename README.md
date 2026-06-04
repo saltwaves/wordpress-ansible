@@ -78,3 +78,8 @@ Set `DEST_SSH_PRIVATE_KEY_FILE` when the destination host needs a specific SSH
 key, and optionally `DEST_SSH_PUBLIC_KEY_FILE` to verify the keypair before
 connecting. Run `scripts/migrate-wordpress.sh --help` for all required and
 optional environment variables.
+
+Set `SOURCE_SSH_PRIVATE_KEY_FILE` when the source host requires a specific local
+SSH key. The script uses it for direct source SSH commands and adds it to the
+local SSH agent so the destination pull can authenticate through agent
+forwarding.
