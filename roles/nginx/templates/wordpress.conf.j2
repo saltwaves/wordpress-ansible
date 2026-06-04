@@ -28,6 +28,9 @@ server {
 
     location ~ \.php$ {
         include snippets/fastcgi-php.conf;
+        fastcgi_buffer_size {{ nginx_fastcgi_buffer_size }};
+        fastcgi_buffers {{ nginx_fastcgi_buffers }};
+        fastcgi_busy_buffers_size {{ nginx_fastcgi_busy_buffers_size }};
         fastcgi_pass unix:/run/php/php{{ php_version }}-fpm.sock;
     }
 
