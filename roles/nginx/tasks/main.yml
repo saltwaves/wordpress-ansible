@@ -54,9 +54,11 @@
 - name: Issue Let's Encrypt certificate
   command: >-
     certbot --nginx --non-interactive --agree-tos --redirect
+    {% if letsencrypt_email | default('', true) | length > 0 %}
     --email {{ letsencrypt_email }}
-    {{ wordpress_domains | map('regex_replace', '^(.*)$', '-d \\1') | join(' ') }}
-  args:
-    creates: "/etc/letsencrypt/live/{{ wordpress_domains[0] }}/fullchain.pem"
+    {% else %}
+    --register-unsafely-without-email
+    {% endif %}
+    --domains {{ wordpress_domains | join(',') }}
   when: nginx_enable_letsencrypt | bool
   notify: reload nginx
